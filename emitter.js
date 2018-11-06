@@ -36,10 +36,10 @@ function getEmitter() {
         off: function (event, context) {
             for (let key of [...events.keys()]) {
                 if (key === event || key.startsWith(event + '.')) {
-                    let needingEvents = events.get(event);
+                    let needingEvents = events.get(key);
                     needingEvents.forEach((eventObject, index) => {
                         if (eventObject.context === context) {
-                            events.get(event).splice(index, 1);
+                            events.get(key).splice(index, 1);
                         }
                     });
                 }
