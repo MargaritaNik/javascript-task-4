@@ -11,59 +11,112 @@ const isStar = true;
  * @returns {Object}
  */
 function getEmitter() {
+    let events = new Map();
+
     return {
 
-        /**
-         * Подписаться на событие
-         * @param {String} event
-         * @param {Object} context
-         * @param {Function} handler
-         */
         on: function (event, context, handler) {
-            console.info(event, context, handler);
+            const object = {
+                func: handler,
+                context,
+                frequency: 1,
+                times: Infinity,
+                count: 0
+            };
+
+            if (!events.has(event)) {
+                events.set(event, []);
+            }
+
+            events.get(event).push(object);
+
+            return this;
         },
 
-        /**
-         * Отписаться от события
-         * @param {String} event
-         * @param {Object} context
-         */
         off: function (event, context) {
-            console.info(event, context);
+            for (let key of [...events.keys()]) {
+                if (key === event || key.startsWith(event + '.')) {
+                    let needingEvents = events.get(event);
+                    needingEvents.forEach((eventObject, index) => {
+                        if (eventObject.context === context) {
+                            events.get(event).splice(index, 1);
+                        }
+                    });
+                }
+            }
+
+            return this;
         },
 
-        /**
-         * Уведомить о событии
-         * @param {String} event
-         */
         emit: function (event) {
-            console.info(event);
+            let eventToEmit = getAllEvents(event, events);
+            eventToEmit.forEach(currentEvent => {
+                events.get(currentEvent).forEach(eventObject => {
+                    if (eventObject.times > eventObject.count &&
+                        eventObject.count % eventObject.frequency === 0) {
+                        eventObject.func.call(eventObject.context);
+                    }
+                    eventObject.count++;
+                });
+            });
+
+            return this;
         },
 
-        /**
-         * Подписаться на событие с ограничением по количеству полученных уведомлений
-         * @star
-         * @param {String} event
-         * @param {Object} context
-         * @param {Function} handler
-         * @param {Number} times – сколько раз получить уведомление
-         */
         several: function (event, context, handler, times) {
-            console.info(event, context, handler, times);
+            var object = {
+                func: handler,
+                context,
+                frequency: 1,
+                times: times <= 0 ? Infinity : times,
+                count: 0
+            };
+
+            if (!events.has(event)) {
+                events.set(event, []);
+            }
+            events.get(event).push(object);
+
+            return this;
         },
 
-        /**
-         * Подписаться на событие с ограничением по частоте получения уведомлений
-         * @star
-         * @param {String} event
-         * @param {Object} context
-         * @param {Function} handler
-         * @param {Number} frequency – как часто уведомлять
-         */
         through: function (event, context, handler, frequency) {
-            console.info(event, context, handler, frequency);
+            var object = {
+                func: handler,
+                context,
+                frequency: frequency <= 0 ? 1 : frequency,
+                times: Infinity,
+                count: 0
+            };
+
+            if (!events.has(event)) {
+                events.set(event, []);
+            }
+
+            events.get(event).push(object);
+
+            return this;
         }
     };
+}
+
+function getAllEvents(event, events) {
+    let allEvent = event.split('.');
+    let eventToEmit = [];
+    let str = '';
+    for (let i = 0; i < allEvent.length; i++) {
+        if (i === 0) {
+            str += allEvent[i];
+        } else {
+            str += '.' + allEvent[i];
+        }
+        if (events.has(str)) {
+            eventToEmit.push(str);
+        }
+    }
+    eventToEmit.reverse();
+
+    return eventToEmit;
 }
 
 module.exports = {
